@@ -64,6 +64,13 @@ def approach():
   pass
   
 def grab():
+  # Make sure fingers are opened
+  
+  # Move arm towards the "bucket"
+  
+  # Start grip
+  
+  # End grip
   pass
   
 def position_arm():
@@ -76,6 +83,12 @@ if __name__ == '__main__':
   rospy.init_node('ice_bucket_challenge')
   
   try:
-    pass
+    approach()
+    rospy.sleep(1)
+    grab()
+    rospy.sleep(1)
+    position_arm()
+    rospy.sleep(1)
+    shower()
   except rospy.ROSInterruptException:
     print "program interrupted before completion"
