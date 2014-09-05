@@ -2,25 +2,21 @@
 
 import roslib;
 import rospy
-
-import sys
-import numpy as np
-
 import actionlib
 import jaco_msgs.msg
 import std_msgs.msg
 import geometry_msgs.msg
-
-import goal_generators
+from jaco_msgs.srv import HomeArm
+import socket
 
 def cartesian_pose_client(position, orientation):
     """Send a cartesian goal to the action server."""
-    action_address = '/' + str(sys.argv[1]) + '_arm_driver/arm_pose/arm_pose'
+    action_address = '/jaco_arm_driver/arm_pose/arm_pose'
     client = actionlib.SimpleActionClient(action_address, jaco_msgs.msg.ArmPoseAction)
     client.wait_for_server()
 
     goal = jaco_msgs.msg.ArmPoseGoal()
-    goal.pose.header = std_msgs.msg.Header(frame_id=(str(sys.argv[1]) + '_api_origin'))
+    goal.pose.header = std_msgs.msg.Header(frame_id=('jaco_api_origin'))
     goal.pose.pose.position = geometry_msgs.msg.Point(
         x=position[0], y=position[1], z=position[2])
     goal.pose.pose.orientation = geometry_msgs.msg.Quaternion(
@@ -28,7 +24,7 @@ def cartesian_pose_client(position, orientation):
 
     client.send_goal(goal)
 
-    if client.wait_for_result(rospy.Duration(10.0)):
+    if client.wait_for_result(rospy.Duration(60.0)):
         return client.get_result()
     else:
         client.cancel_all_goals()
@@ -37,7 +33,7 @@ def cartesian_pose_client(position, orientation):
 
 def gripper_client(finger_positions):
     """Send a gripper goal to the action server."""
-    action_address = '/' + str(sys.argv[1]) + '_arm_driver/fingers/finger_positions'
+    action_address = '/jaco_arm_driver/fingers/finger_positions'
     client = actionlib.SimpleActionClient(action_address,
                                           jaco_msgs.msg.SetFingersPositionAction)
     client.wait_for_server()
@@ -53,42 +49,47 @@ def gripper_client(finger_positions):
         goal.fingers.finger3 = float(finger_positions[2])
 
     client.send_goal(goal)
-    if client.wait_for_result(rospy.Duration(5.0)):
+    if client.wait_for_result(rospy.Duration(60.0)):
         return client.get_result()
     else:
         client.cancel_all_goals()
         print('        the gripper action timed-out')
         return None
 
+def home():
+    rospy.ServiceProxy("/jaco_arm_driver/in/home_arm", HomeArm)()
+    gripper_client((0, 0, 0))
+
 def approach():
-  pass
-  
+    cartesian_pose_client((0.2, 0.5, 0.0), (0.0, 0.738, -0.675, 0.0))
+
 def grab():
-  # Make sure fingers are opened
-  
-  # Move arm towards the "bucket"
-  
-  # Start grip
-  
-  # End grip
-  pass
-  
+    cartesian_pose_client((0.2, 0.68, 0.0), (0.04, -0.75, 0.659, 0.03))
+    gripper_client((50, 50, 50))
+
 def position_arm():
-  pass
-  
+    cartesian_pose_client((0.155, -0.586, 0.8), (0.735, 0.09, -0.098, 0.664))
+
 def shower():
-  pass
+    cartesian_pose_client((0.15, -0.615, 0.774), (-0.24, 0.565, 0.757, 0.224))
 
 if __name__ == '__main__':
-  rospy.init_node('ice_bucket_challenge')
-  
-  try:
-    approach()
-    rospy.sleep(1)
-    grab()
-    rospy.sleep(1)
-    position_arm()
-    rospy.sleep(1)
-    shower()
-  except rospy.ROSInterruptException:
-    print "program interrupted before completion"
+    rospy.init_node('ice_bucket_challenge')
+    while not rospy.is_shutdown():
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.bind(('', 1337))
+
+        key = ""
+        while key != "x":
+            key = s.recvfrom(1)[0]
+
+        s.close()
+        
+        try:
+            home()
+            approach()
+            grab()
+            position_arm()
+            shower()
+        except rospy.ROSInterruptException:
+            print "program interrupted before completion"

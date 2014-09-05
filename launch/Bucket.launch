@@ -1,0 +1,6 @@
+<launch>
+    <node pkg="jaco_ice_bucket_challenge" name="ice_bucket_challenge" type="ice_bucket_challenge.py" output="screen">
+    </node>
+
+    <include file="$(find jaco_driver)/launch/jaco_arm.launch" />
+</launch>
